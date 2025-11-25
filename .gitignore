@@ -16,6 +16,9 @@ dist/
 build/
 *.egg-info/
 
+# IDE files
+.cursorindexingignore
+
 # CDK
 infrastructure/cdk.out/
 infrastructure/.cdk.staging/
