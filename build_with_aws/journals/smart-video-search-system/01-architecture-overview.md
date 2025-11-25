@@ -44,7 +44,7 @@ The Smart Video Search System is a serverless application built on AWS that enab
 ┌──────────┐  ┌───────────┐  ┌──────────┐
 │ Speech   │  │  Caption  │  │  Image   │
 │ Search   │  │  Search   │  │  Search  │
-│ (KB)     │  │  (KB)     │  │  (OSS)   │
+│ (KB)     │  │  (KB)     │  │(S3 Vec)  │
 └──────────┘  └───────────┘  └──────────┘
 ```
 
@@ -63,7 +63,7 @@ The Smart Video Search System is a serverless application built on AWS that enab
   - Claude Sonnet (intelligent agent routing)
   - Titan Multimodal Embeddings (image vectors)
 - **Bedrock Knowledge Bases**: RAG for speech and caption search
-- **OpenSearch Serverless**: Vector search for image similarity
+- **S3 Vectors**: Vector search for image similarity
 - **AgentCore Gateway**: MCP (Model Context Protocol) server for tool invocation
 
 ### Supporting Services
@@ -79,7 +79,7 @@ The Smart Video Search System is a serverless application built on AWS that enab
 Upload Video → S3 → process_video Lambda
                     ├─→ extract_frames → generate_captions → embed_captions
                     ├─→ AWS Transcribe → chunk_transcript
-                    └─→ embed_images → OpenSearch indexing
+                    └─→ embed_images → S3 Vectors indexing
 ```
 
 ### 2. Search Flow
@@ -92,7 +92,7 @@ User Query → agent_api → Claude analyzes intent
                          ┌───────────────┴──────────────┐
                          ▼                              ▼
                search_by_speech/caption        search_by_image
-               (Bedrock Knowledge Base)        (OpenSearch)
+               (Bedrock Knowledge Base)        (S3 Vectors)
                          ▼                              ▼
                     Results with timestamps ← Combined → Video player
 ```
@@ -106,7 +106,7 @@ User Query → agent_api → Claude analyzes intent
 ### 2. Three-Index Approach
 - **Speech Index**: Full transcripts in Bedrock KB for semantic search
 - **Caption Index**: Frame descriptions in Bedrock KB for visual search
-- **Image Index**: Frame embeddings in OpenSearch for similarity search
+- **Image Index**: Frame embeddings in S3 Vectors for similarity search
 - **Why**: Each modality requires different search characteristics
 
 ### 3. Claude Vision for Captions
@@ -162,12 +162,12 @@ s3://processed-bucket/
 - **generate_captions**: Claude Vision batch processing
 - **embed_captions**: Prepares KB documents with metadata
 - **chunk_transcript**: Prepares full transcript for KB
-- **embed_images**: Titan embeddings → OpenSearch
+- **embed_images**: Titan embeddings → S3 Vectors
 
 ### Search Tools (MCP)
 - **search_by_speech**: Bedrock KB → match snippet → extract exact timestamp from Transcribe JSON
 - **search_by_caption**: Bedrock KB with frame metadata
-- **search_by_image**: OpenSearch vector similarity
+- **search_by_image**: S3 Vectors similarity search
 - **list_videos**: Query DynamoDB
 - **get_video_metadata**: DynamoDB lookup
 - **get_full_transcript**: S3 retrieval
@@ -182,13 +182,13 @@ s3://processed-bucket/
 ### Storage
 - S3: Unlimited storage, lifecycle policies for old videos
 - DynamoDB: On-demand billing, auto-scaling
-- OpenSearch Serverless: Auto-scaling compute and storage
+- S3 Vectors: Serverless vector storage, pay-per-query
 
 ### Cost Optimization
 - Bedrock KB: Per-query pricing
 - Lambda: Pay per execution + duration
 - S3 Intelligent-Tiering for frame storage
-- OpenSearch Serverless: Only pay for indexed data
+- S3 Vectors: Pay per storage and query
 
 ## Security
 

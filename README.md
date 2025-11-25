@@ -21,8 +21,8 @@ The system uses AWS serverless services to provide scalable video processing and
 - **AI/ML**: 
   - Amazon Transcribe for speech-to-text
   - Amazon Bedrock (Claude Vision, Claude Sonnet, Titan Embeddings)
-  - Bedrock Knowledge Bases for semantic search
-  - OpenSearch Serverless for vector similarity search
+  - Bedrock Knowledge Bases for semantic search (speech and captions)
+  - S3 Vectors for image similarity search
 - **Infrastructure**: CloudFormation via AWS CDK
 - **Frontend**: Static website hosted on S3 + CloudFront
 
@@ -133,8 +133,9 @@ Detailed step-by-step guides are available in the journals:
 ## Cost Estimates
 
 ### Fixed Monthly Costs
-- **OpenSearch Serverless**: ~$175/month (minimum 2 OCUs)
-  - **Note**: This is the primary cost driver. Consider deleting the OSS collection when not in use for development.
+- **S3 Storage**: ~$0.023 per GB/month (for videos, frames, embeddings)
+  - Example: 10 videos × 100MB = 1GB = $0.023/month
+  - **Note**: This is pay-as-you-go, no minimum costs
 
 ### Variable Costs (per-use)
 - **Lambda**: Pay per request/duration (~$0.20 per GB-second)
@@ -154,8 +155,8 @@ Detailed step-by-step guides are available in the journals:
 ### Cost Optimization Tips
 1. Reduce frame sampling rate (6fps → 3fps saves 50%)
 2. Use Bedrock Batch Inference for captions (50% discount)
-3. Delete OpenSearch collection when not actively using the system
-4. Set S3 lifecycle policies to transition old frames to Glacier
+3. Set S3 lifecycle policies to transition old frames to Glacier
+4. Delete unused videos and their associated embeddings
 
 ## Cleanup
 
@@ -202,7 +203,7 @@ Built using:
 - Amazon Bedrock (Claude, Titan)
 - AWS Lambda
 - Amazon Transcribe
-- OpenSearch Serverless
+- S3 Vectors
 - AWS CDK
 
 ## Support

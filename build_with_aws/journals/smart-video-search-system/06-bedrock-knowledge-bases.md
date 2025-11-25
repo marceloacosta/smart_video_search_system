@@ -102,8 +102,10 @@ speech_kb = bedrock.CfnKnowledgeBase(
         )
     ),
     storage_configuration=bedrock.CfnKnowledgeBase.StorageConfigurationProperty(
-        type="OPENSEARCH_SERVERLESS",  # or use S3 for simpler setup
-        opensearch_serverless_configuration=...
+        type="VECTOR_S3",  # Using S3 for vector storage
+        vector_s3_configuration=bedrock.CfnKnowledgeBase.VectorS3ConfigurationProperty(
+            bucket_arn=vector_bucket.bucket_arn
+        )
     )
 )
 

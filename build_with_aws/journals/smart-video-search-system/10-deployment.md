@@ -53,8 +53,7 @@ Create `infrastructure/cdk.context.json` (do not commit this if it has real IDs)
 {
   "project_name": "mvip-video-search",
   "environment": "prod",
-  "bedrock_region": "us-east-1",
-  "opensearch_region": "us-east-1"
+  "bedrock_region": "us-east-1"
 }
 ```
 
@@ -83,11 +82,11 @@ cdk deploy --all
 
 **What happens during deploy:**
 1. CloudFormation template synthesized
-2. S3 buckets created
+2. S3 buckets created (raw, processed, vectors, website)
 3. Lambda layers built (ffmpeg)
 4. Lambda functions deployed
-5. OpenSearch Serverless collection created
-6. Bedrock Knowledge Bases created
+5. S3 Vectors index created
+6. Bedrock Knowledge Bases created (speech and caption)
 7. API Gateway and CloudFront setup
 
 ### 3. Post-Deployment Setup
@@ -114,18 +113,19 @@ Upload a short video via the UI and monitor the processing pipeline.
 ## Cost Estimates
 
 **Fixed Costs:**
-- **OpenSearch Serverless**: ~$175/month (min 2 OCUs active)
-  - *Tip: Delete AOSS collection when not in use for dev*
-- **KMS Keys**: ~$1/month
+- **None** - Fully serverless with no minimum charges
 
-**Variable Costs (per hour/usage):**
+**Variable Costs (per-use):**
 - **Lambda**: Pay per request/duration
-- **S3**: Storage + requests
+- **S3 Storage**: ~$0.023 per GB-month
+- **S3 Vectors**: ~$0.025 per GB-month + ~$0.0001 per query
 - **Bedrock**: Token usage (Input/Output)
 - **Transcribe**: $0.024/min
 
+**Example:** 10 videos × 100MB = 1GB = ~$0.05/month storage + usage costs
+
 **Recommendation:**
-For development/demos, destroy the stack when not in use to avoid OpenSearch costs.
+The system is cost-effective for development and production. All services scale to zero when not in use.
 
 ## Cleanup / Destruction
 
@@ -151,9 +151,9 @@ cdk destroy --all
 **Error:** `AccessDeniedException` when invoking models.
 **Fix:** Go to AWS Console > Bedrock > Model access, and request access to Claude and Titan models.
 
-### Issue: OpenSearch Permissions
-**Error:** Lambda cannot access OpenSearch.
-**Fix:** Ensure the AOSS data access policy includes the Lambda execution role ARN.
+### Issue: S3 Vectors Permissions
+**Error:** Lambda cannot access S3 Vectors.
+**Fix:** Ensure the Lambda execution role has permissions for `s3vectors:PutVectors` and `s3vectors:QueryVectors`.
 
 ## CI/CD (Future)
 

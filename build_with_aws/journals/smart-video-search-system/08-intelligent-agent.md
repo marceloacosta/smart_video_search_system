@@ -28,7 +28,7 @@ agent_api Lambda
         ▼                ▼             ▼
   search_by_speech  search_by_caption  search_by_image
         ↓                ↓             ↓
-      Bedrock KB      Bedrock KB    OpenSearch
+      Bedrock KB      Bedrock KB    S3 Vectors
         ↓                ↓             ▼
             Results formatted for UI
 ```

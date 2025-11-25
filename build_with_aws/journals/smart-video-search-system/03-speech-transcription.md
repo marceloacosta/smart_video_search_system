@@ -513,7 +513,7 @@ transcribe.create_vocabulary(
     Phrases=[
         'Bedrock',
         'AgentCore',
-        'OpenSearch',
+        'S3 Vectors',
         'multimodal'
     ]
 )

@@ -5,7 +5,7 @@
 
 ## Overview
 
-The image embeddings pipeline uses Amazon Titan Multimodal Embeddings to create vector representations of video frames, which are then indexed in OpenSearch Serverless for similarity search. This enables queries like "find similar scenes" or uploading an image to find matching frames.
+The image embeddings pipeline uses Amazon Titan Multimodal Embeddings to create vector representations of video frames, which are then indexed in S3 Vectors for similarity search. This enables queries like "find similar scenes" or uploading an image to find matching frames.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Vector Embeddings
         ↓
 embed_and_index_images Lambda
         ↓
-OpenSearch Serverless Collection
+S3 Vectors Index
         ↓
 search_by_image Tool (Vector Similarity)
 ```
@@ -152,119 +152,120 @@ def generate_embedding(bedrock_client, image_bytes):
 ]
 ```
 
-## OpenSearch Serverless Integration
+## S3 Vectors Integration
 
-### Collection Setup
+### Vector Store Setup
 
-**Collection Name:** `video-frame-vectors`  
+**Bucket Name:** `mvip-image-vectors`  
+**Index Name:** `image-embeddings`  
 **Type:** Vector search  
 **Dimensions:** 1024  
-**Engine:** OpenSearch Serverless (AOSS)
+**Engine:** S3 Vectors (native AWS vector storage)
 
-### Index Mapping
+### Vector Record Format
+
+Each vector record contains:
+- **key**: Unique identifier (`video_id_frame_NNNN`)
+- **data**: Embedding vector wrapped in `float32` format
+- **metadata**: Frame information (video_id, frame_number, timestamp, etc.)
 
 ```json
 {
-  "settings": {
-    "index": {
-      "knn": true,
-      "knn.algo_param.ef_search": 512
-    }
+  "key": "video-123_frame_0042",
+  "data": {
+    "float32": [0.123, -0.456, 0.789, ...]
   },
-  "mappings": {
-    "properties": {
-      "video_id": {"type": "keyword"},
-      "frame_number": {"type": "integer"},
-      "timestamp_sec": {"type": "float"},
-      "frame_key": {"type": "keyword"},
-      "embedding": {
-        "type": "knn_vector",
-        "dimension": 1024,
-        "method": {
-          "name": "hnsw",
-          "space_type": "cosinesimil",
-          "engine": "nmslib",
-          "parameters": {
-            "ef_construction": 512,
-            "m": 16
-          }
-        }
-      }
-    }
+  "metadata": {
+    "video_id": "video-123",
+    "frame_number": 42,
+    "timestamp": 7.0,
+    "duration_seconds": 60.0,
+    "s3_key": "video-123/frames/frame_0042.jpg",
+    "s3_uri": "s3://processed-bucket/video-123/frames/frame_0042.jpg",
+    "size_bytes": 45678
   }
 }
 ```
 
-**HNSW Parameters:**
-- **ef_construction**: 512 (index quality)
-- **m**: 16 (connections per node)
-- **space_type**: cosinesimil (cosine similarity)
+**Benefits of S3 Vectors:**
+- **Serverless**: No infrastructure management
+- **Cost-effective**: Pay only for storage and queries
+- **Native AWS**: Integrated with IAM, CloudWatch
+- **Simple API**: put_vectors() and query_vectors()
 
 ## embed_and_index_images Lambda
 
 **File:** `src/lambdas/embed_and_index_images.py`
 
 ### Purpose
-Index embeddings into OpenSearch Serverless
+Index embeddings into S3 Vectors
 
 ### Implementation
 
 ```python
-from opensearchpy import OpenSearch, RequestsHttpConnection
-from requests_aws4auth import AWS4Auth
+def store_vectors_in_s3(vectors: List[Dict[str, Any]]) -> None:
+    """
+    Store embedding vectors in S3 Vectors.
+    
+    Args:
+        vectors: List of vector records with id, embedding, and metadata
+    """
+    print(f"Storing {len(vectors)} vectors in S3 Vectors...")
+    
+    # Prepare records for put-vectors API
+    vector_records = []
+    for vec in vectors:
+        vector_records.append({
+            'key': vec['id'],
+            'data': {
+                'float32': vec['embedding']  # Wrap embedding in float32 dict
+            },
+            'metadata': vec['metadata']  # Metadata as dict (not JSON string)
+        })
+    
+    # Put vectors in batches (API limit: 100 vectors per request)
+    batch_size = 100
+    for i in range(0, len(vector_records), batch_size):
+        batch = vector_records[i:i + batch_size]
+        
+        s3vectors.put_vectors(
+            vectorBucketName=S3_VECTOR_BUCKET,
+            indexName=S3_VECTOR_INDEX,
+            vectors=batch
+        )
+        
+        print(f"  Stored batch {i // batch_size + 1} ({len(batch)} vectors)")
+    
+    print(f"✓ All {len(vectors)} vectors stored successfully")
 
 def lambda_handler(event, context):
     video_id = event['video_id']
-    embeddings_key = f"{video_id}/embeddings/image_embeddings.json"
+    frames_prefix = event['frames_prefix']
     
-    s3 = boto3.client('s3')
-    
-    # Download embeddings
-    response = s3.get_object(Bucket=processed_bucket, Key=embeddings_key)
-    embeddings = json.loads(response['Body'].read())
-    
-    # Connect to OpenSearch
-    service = 'aoss'
-    credentials = boto3.Session().get_credentials()
-    awsauth = AWS4Auth(
-        credentials.access_key,
-        credentials.secret_key,
-        os.environ['AWS_REGION'],
-        service,
-        session_token=credentials.token
-    )
-    
-    opensearch = OpenSearch(
-        hosts=[{'host': os.environ['OPENSEARCH_ENDPOINT'], 'port': 443}],
-        http_auth=awsauth,
-        use_ssl=True,
-        verify_certs=True,
-        connection_class=RequestsHttpConnection
-    )
-    
-    # Index embeddings
-    index_name = 'video-frames'
-    
-    for emb in embeddings:
-        doc = {
-            'video_id': emb['video_id'],
-            'frame_number': emb['frame_number'],
-            'timestamp_sec': emb['timestamp_sec'],
-            'frame_key': emb['frame_key'],
-            'embedding': emb['embedding']
-        }
+    # Process frames and generate embeddings
+    vectors = []
+    for frame in frame_objects:
+        embedding = generate_image_embedding(image_bytes)
         
-        doc_id = f"{video_id}_frame_{emb['frame_number']:04d}"
-        
-        opensearch.index(
-            index=index_name,
-            id=doc_id,
-            body=doc
-        )
+        vector_id = f"{video_id}_frame_{frame_number:04d}"
+        vectors.append({
+            'id': vector_id,
+            'embedding': embedding,
+            'metadata': {
+                'video_id': video_id,
+                'frame_number': frame_number,
+                'timestamp': round(timestamp, 2),
+                'duration_seconds': round(duration_seconds, 2),
+                's3_key': frame_key,
+                's3_uri': f"s3://{PROCESSED_BUCKET}/{frame_key}",
+                'size_bytes': image_size
+            }
+        })
     
-    print(f"Indexed {len(embeddings)} embeddings for {video_id}")
+    # Store all vectors in S3 Vectors
+    store_vectors_in_s3(vectors)
     
-    return {'indexed_count': len(embeddings)}
+    return {'indexed_count': len(vectors)}
 ```
 
 ## Vector Search
@@ -295,66 +296,66 @@ def search_by_image(query_image_bytes, video_id=None, top_k=5):
     )
     query_embedding = json.loads(response['body'].read())['embedding']
     
-    # Build OpenSearch query
-    query_body = {
-        "size": top_k,
-        "query": {
-            "knn": {
-                "embedding": {
-                    "vector": query_embedding,
-                    "k": top_k
-                }
-            }
-        }
-    }
-    
-    # Filter by video_id if specified
-    if video_id:
-        query_body["query"] = {
-            "bool": {
-                "must": [
-                    {"knn": {"embedding": {"vector": query_embedding, "k": top_k}}},
-                    {"term": {"video_id": video_id}}
-                ]
-            }
-        }
-    
-    # Execute search
-    opensearch = get_opensearch_client()
-    response = opensearch.search(
-        index='video-frames',
-        body=query_body
+    # Query S3 Vectors
+    s3vectors = boto3.client('s3vectors')
+    response = s3vectors.query_vectors(
+        vectorBucketName=S3_VECTOR_BUCKET,
+        indexName=S3_VECTOR_INDEX,
+        queryVector={'float32': query_embedding},
+        topK=top_k * 10 if video_id else top_k,  # Get more if filtering
+        returnMetadata=True,
+        returnDistance=True
     )
     
-    # Format results
-    results = []
-    for hit in response['hits']['hits']:
-        results.append({
-            'video_id': hit['_source']['video_id'],
-            'timestamp': hit['_source']['timestamp_sec'],
-            'frame_key': hit['_source']['frame_key'],
-            'similarity_score': hit['_score']
+    # Filter by video_id if specified
+    matches = []
+    for result in response.get('vectors', []):
+        metadata = result.get('metadata', {})
+        
+        if video_id and metadata.get('video_id') != video_id:
+            continue
+        
+        matches.append({
+            'video_id': metadata.get('video_id'),
+            'timestamp': metadata.get('timestamp'),
+            'frame_key': metadata.get('s3_key'),
+            'distance': result.get('distance'),  # Lower is better
+            'frame_number': metadata.get('frame_number')
         })
     
-    return results
+    # Return top_k after filtering
+    return matches[:top_k]
 ```
 
 ### Text-to-Image Search
 
 ```python
 def search_by_text_description(text_query, video_id=None, top_k=5):
-    # Generate embedding from text
+    # Generate embedding from text using Titan Multimodal
     bedrock = boto3.client('bedrock-runtime')
     response = bedrock.invoke_model(
         modelId='amazon.titan-embed-image-v1',
         body=json.dumps({
-            "inputText": text_query
+            "inputText": text_query,
+            "embeddingConfig": {
+                "outputEmbeddingLength": 1024
+            }
         })
     )
     query_embedding = json.loads(response['body'].read())['embedding']
     
-    # Same vector search as image-to-image
-    return search_with_embedding(query_embedding, video_id, top_k)
+    # Query S3 Vectors (same as image-to-image)
+    s3vectors = boto3.client('s3vectors')
+    response = s3vectors.query_vectors(
+        vectorBucketName=S3_VECTOR_BUCKET,
+        indexName=S3_VECTOR_INDEX,
+        queryVector={'float32': query_embedding},
+        topK=top_k,
+        returnMetadata=True,
+        returnDistance=True
+    )
+    
+    return format_results(response)
 ```
 
 ## Performance & Cost
@@ -368,9 +369,10 @@ def search_by_text_description(text_query, video_id=None, top_k=5):
 ### Vector Search
 
 - **Query Latency**: ~50-200ms
-- **Cost**: OpenSearch Serverless OCU (compute units)
-  - Indexing: ~$0.24/OCU-hour
-  - Search: ~$0.24/OCU-hour
+- **Cost**: S3 Vectors pricing
+  - Storage: ~$0.025 per GB-month
+  - Queries: ~$0.0001 per query
+  - Pay-per-use with no minimum costs (serverless)
 
 ### Optimization
 
@@ -405,13 +407,14 @@ def parallel_index(embeddings, max_workers=5):
 
 ### Issue: Slow Indexing
 - Increase Lambda memory
-- Use batch indexing
-- Check OpenSearch cluster size
+- Use batch indexing (100 vectors per batch)
+- Parallelize embedding generation
 
 ### Issue: Search Returns Irrelevant Results
-- Adjust k-NN parameters (ef_search)
-- Fine-tune similarity threshold
+- Review the distance threshold (lower is better)
+- Increase top_k to get more candidates
 - Review embedding quality
+- Consider filtering by video_id first
 
 ## Related Documentation
 
