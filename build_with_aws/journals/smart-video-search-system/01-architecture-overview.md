@@ -77,10 +77,11 @@ The Smart Video Search System is a serverless application built on AWS that enab
 
 ```
 Upload Video → S3 → process_video Lambda
-                    ├─→ extract_frames → generate_captions → embed_captions
-                    ├─→ AWS Transcribe → chunk_transcript
-                    └─→ embed_images → S3 Vectors indexing
+                    ├─→ extract_frames → generate_captions → embed_captions → embed_and_index_images
+                    └─→ AWS Transcribe → check_transcription (polls) → chunk_transcript
 ```
+
+**Note**: `embed_and_index_images` indexes frame embeddings into S3 Vectors for image similarity search.
 
 ### 2. Search Flow
 
@@ -157,12 +158,13 @@ s3://processed-bucket/
 - Handles tool execution via SigV4-authenticated requests to AgentCore Gateway
 
 ### Processing Lambdas
-- **process_video**: Orchestrator, triggers all downstream processes
+- **process_video**: Orchestrator, triggers extract_frames and check_transcription
 - **extract_frames**: FFmpeg with evenly distributed frame extraction (default: 45-120 frames per video)
-- **generate_captions**: Claude Vision batch processing (same frames as embeddings)
-- **embed_captions**: Prepares KB documents with metadata
-- **chunk_transcript**: Prepares full transcript for KB
-- **embed_images**: Titan embeddings → S3 Vectors (same frames as captions)
+- **generate_captions**: Claude Vision batch processing for frame descriptions
+- **embed_captions**: Prepares caption KB documents with metadata, triggers image indexing
+- **embed_and_index_images**: Titan embeddings → S3 Vectors (same frames as captions)
+- **chunk_transcript**: Prepares full transcript for speech KB
+- **check_transcription**: Polls AWS Transcribe job status until complete
 
 ### Search Tools (MCP)
 - **search_by_speech**: Bedrock KB → match snippet → extract exact timestamp from Transcribe JSON
