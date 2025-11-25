@@ -173,9 +173,16 @@ def lambda_handler(event, context):
             return {'status': 'failed', 'error': 'Transcription failed'}
             
         else:  # IN_PROGRESS
-            # Re-invoke self after delay
-            time.sleep(10)
-            return lambda_handler(event, context)
+            # Re-invoke self asynchronously after small delay
+            time.sleep(5)  # Small delay to avoid rate limiting
+            lambda_client.invoke(
+                FunctionName=context.function_name,
+                InvocationType='Event',  # Async
+                Payload=json.dumps({
+                    'video_id': video_id,
+                    'attempt': attempt + 1
+                })
+            )
             
     except Exception as e:
         print(f"Error checking transcription: {str(e)}")
@@ -183,8 +190,9 @@ def lambda_handler(event, context):
 ```
 
 **Polling Strategy:**
-- Check every 10 seconds
-- Max polling time: Lambda timeout (15 minutes)
+- Small 5-second delay between re-invocations to avoid rate limiting
+- Max attempts: 60 (up to ~5 minutes of polling)
+- Uses async Lambda invocation to avoid timeout issues
 - Alternative: Use Step Functions Wait state
 
 **Status Values:**

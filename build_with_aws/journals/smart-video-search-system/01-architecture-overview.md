@@ -214,7 +214,7 @@ s3://processed-bucket/
 ### CloudWatch Logs
 - All Lambda functions log to CloudWatch
 - Log groups: `/aws/lambda/{function-name}`
-- Retention: 7 days default
+- Retention: 731 days (2 years)
 
 ### Metrics
 - Lambda invocations, duration, errors
