@@ -174,7 +174,9 @@ def generate_caption(s3_client, bedrock_client, bucket, frame_key):
     
     # Extract frame number for timestamp
     frame_num = extract_frame_number(frame_key)  # e.g., "0042" from "frame_0042.jpg"
-    timestamp_sec = frame_num / 6  # 6 fps
+    # Calculate timestamp based on even frame distribution
+    # timestamp = (frame_num - 1) * duration / (total_frames - 1)
+    timestamp_sec = calculate_frame_timestamp(frame_num, total_frames, video_duration)
     
     # Call Claude Vision
     prompt = """Describe this video frame in 2-3 sentences. Focus on:
@@ -368,7 +370,7 @@ A man in a blue suit stands at a podium addressing an audience. Behind him is a 
 ### Processing Time
 
 - **Caption Generation**: ~2-3 seconds per frame
-- **100 frames** (typical 1-minute video at 6fps): ~3-5 minutes
+- **45 frames** (default for any video length): ~2-3 minutes
 - **Bottleneck**: Claude Vision API throughput
 
 ### Cost Analysis
@@ -388,10 +390,11 @@ A man in a blue suit stands at a podium addressing an audience. Behind him is a 
 
 ### Optimization Strategies
 
-**1. Frame Sampling**
-- Current: 6 fps (1 frame every ~167ms)
-- Could reduce to 3 fps (1 frame every ~333ms)
-- **Savings**: 50% fewer frames to caption
+**1. Adjust Frame Count**
+- Default: 45-120 frames per video (evenly distributed regardless of length)
+- Can be adjusted via `MAX_FRAMES_PER_VIDEO` environment variable
+- Lower frame count = faster processing + lower cost
+- Example: 120 frames → 45 frames = 62% cost reduction
 
 **2. Batch Inference**
 - Use Bedrock Batch Inference (50% discount)
@@ -614,7 +617,7 @@ cloudwatch.put_metric_data(
 - Consider batch inference
 
 ### Issue: High Costs
-- Reduce frame sampling rate
+- Reduce frame count (e.g., 45 instead of 120)
 - Use selective captioning
 - Enable batch inference mode
 

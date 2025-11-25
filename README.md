@@ -146,14 +146,16 @@ Detailed step-by-step guides are available in the journals:
   - Claude Sonnet: $3 per 1M input tokens
   - Titan Embeddings: $0.0001 per 1K tokens
 
-**Example**: Processing a 10-minute video with 3600 frames (6fps):
+**Example**: Processing a 10-minute video (default: 45-120 evenly distributed frames):
 - Transcription: $0.24
-- Frame captioning: ~$18-29
-- Embeddings: ~$0.50
-- **Total**: ~$19-30 per video
+- Frame captioning (45 frames): ~$0.27-0.36
+- Embeddings (45 frames): ~$0.003
+- **Total**: ~$0.50-0.60 per video
+
+**Note:** Frame extraction uses an evenly distributed approach (not fixed FPS). For a 10-minute video with 45 frames, one frame is captured every ~13 seconds.
 
 ### Cost Optimization Tips
-1. Reduce frame sampling rate (6fps → 3fps saves 50%)
+1. Reduce frame count (120 → 45 frames saves 62%)
 2. Use Bedrock Batch Inference for captions (50% discount)
 3. Set S3 lifecycle policies to transition old frames to Glacier
 4. Delete unused videos and their associated embeddings

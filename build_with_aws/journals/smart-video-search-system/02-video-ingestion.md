@@ -167,15 +167,22 @@ transcribe_client.start_transcription_job(
 **Purpose:** Extract frames from video using FFmpeg
 
 **Configuration:**
-- Frame rate: 6 fps (one frame every ~167ms)
+- Frame extraction: Evenly distributed across video duration (Kubrick approach)
+- Default frames: 45-120 per video (regardless of video length)
 - Format: JPEG
 - Quality: 85%
 - Resolution: Original (no resize)
 
-**FFmpeg Command:**
+**FFmpeg Command (dynamic FPS):**
 ```bash
-ffmpeg -i input.mp4 -vf fps=6 -qscale:v 2 frame_%04d.jpg
+# Example: 60-second video with 45 frames
+# FPS = 45 / 60 = 0.75 fps (1 frame every ~1.33 seconds)
+ffmpeg -i input.mp4 -vf fps=0.75 -frames:v 45 -q:v 2 frame_%04d.jpg
 ```
+
+**Key Difference from Fixed FPS:**
+- Fixed 6fps: 10-minute video = 3,600 frames (expensive!)
+- Evenly distributed: 10-minute video = 45 frames (cost-effective!)
 
 **Flow:**
 1. Download video from S3 to /tmp/
@@ -323,7 +330,7 @@ def invoke_with_retry(lambda_client, function_name, payload, max_retries=3):
 - Image embedding runs concurrently with caption embedding
 
 ### Cost Optimization
-- Frame sampling at 6fps (vs 30fps) = 80% cost reduction
+- Evenly distributed frames (45 frames vs 30fps = 99%+ cost reduction)
 - S3 Intelligent-Tiering for rarely accessed frames
 - Lambda memory tuned for optimal price/performance
 

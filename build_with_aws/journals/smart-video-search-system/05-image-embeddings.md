@@ -7,21 +7,24 @@
 
 The image embeddings pipeline uses Amazon Titan Multimodal Embeddings to create vector representations of video frames, which are then indexed in S3 Vectors for similarity search. This enables queries like "find similar scenes" or uploading an image to find matching frames.
 
+**Important:** The same extracted frames are used for both caption generation (Claude Vision) and image embeddings (Titan Multimodal). This ensures consistency between text-based search (captions) and visual similarity search (embeddings).
+
 ## Architecture
 
 ```
-Frames in S3
+Frames in S3 (from extract_frames Lambda)
         ↓
-embed_images Lambda (Titan)
-        ↓
-Vector Embeddings
-        ↓
-embed_and_index_images Lambda
-        ↓
-S3 Vectors Index
-        ↓
-search_by_image Tool (Vector Similarity)
+        ├─→ generate_captions (Claude Vision)
+        └─→ embed_and_index_images (Titan Multimodal)
+                ↓
+        Vector Embeddings (1024-dim)
+                ↓
+        S3 Vectors Index
+                ↓
+        search_by_image Tool (Vector Similarity)
 ```
+
+**Note:** Both caption generation and image embedding pipelines consume the same frames from `{video_id}/frames/` in S3. Frames are extracted once using an evenly distributed approach (45-120 frames per video).
 
 ## Titan Multimodal Embeddings
 
@@ -96,7 +99,8 @@ def lambda_handler(event, context):
         
         # Extract frame metadata
         frame_num = extract_frame_number(frame_key)
-        timestamp_sec = frame_num / 6  # 6 fps
+        # Calculate timestamp from evenly distributed frames
+        timestamp_sec = (frame_num - 1) * duration_seconds / (frame_count - 1)
         
         embeddings.append({
             'frame_key': frame_key,

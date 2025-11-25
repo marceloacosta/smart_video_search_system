@@ -159,8 +159,8 @@ Both search modes return a consistent structure for rendering:
 ### Handling Timestamps
 
 - **Speech**: Timestamps extracted via Claude from Transcribe JSON
-- **Caption**: Timestamps calculated from frame number (`frame_num / fps`)
-- **Image**: Timestamps from frame metadata
+- **Caption**: Timestamps from frame metadata (evenly distributed across video duration)
+- **Image**: Timestamps from frame metadata (same as captions - both use identical frames)
 
 **Display:**
 Format seconds to `MM:SS`:
@@ -230,8 +230,8 @@ s3deploy.BucketDeployment(self, "DeployWebsite",
 **Fix**: Check DynamoDB status, verify KB sync.
 
 ### Issue: Timestamps incorrect
-**Cause**: Frame rate mismatch (assumed 6fps vs actual).
-**Fix**: Ensure `extract_frames` and `generate_captions` use consistent fps.
+**Cause**: Frame metadata not properly calculated.
+**Fix**: Ensure timestamps are calculated using evenly distributed frame approach: `(frame_num - 1) * duration / (total_frames - 1)`
 
 ## Related Documentation
 

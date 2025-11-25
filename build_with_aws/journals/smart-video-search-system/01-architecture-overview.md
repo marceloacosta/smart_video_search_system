@@ -158,11 +158,11 @@ s3://processed-bucket/
 
 ### Processing Lambdas
 - **process_video**: Orchestrator, triggers all downstream processes
-- **extract_frames**: FFmpeg at 6fps
-- **generate_captions**: Claude Vision batch processing
+- **extract_frames**: FFmpeg with evenly distributed frame extraction (default: 45-120 frames per video)
+- **generate_captions**: Claude Vision batch processing (same frames as embeddings)
 - **embed_captions**: Prepares KB documents with metadata
 - **chunk_transcript**: Prepares full transcript for KB
-- **embed_images**: Titan embeddings → S3 Vectors
+- **embed_images**: Titan embeddings → S3 Vectors (same frames as captions)
 
 ### Search Tools (MCP)
 - **search_by_speech**: Bedrock KB → match snippet → extract exact timestamp from Transcribe JSON
@@ -235,7 +235,7 @@ s3://processed-bucket/
 ### Optimization Strategies
 - Parallel processing where possible
 - Batch API calls (Bedrock batch inference)
-- Frame sampling (6fps vs 30fps)
+- Evenly distributed frame extraction (45-120 frames per video regardless of length)
 - CloudFront caching for static assets
 
 ## Future Enhancements
