@@ -68,12 +68,12 @@ print(f"Embedding dimensions: {len(embedding)}")
 # Output: Embedding dimensions: 1024
 ```
 
-## embed_images Lambda
+## embed_and_index_images Lambda
 
-**File:** `src/lambdas/embed_images.py`
+**File:** `src/lambdas/embed_and_index_images.py`
 
 ### Purpose
-Generate embeddings for all video frames
+Generate embeddings for all video frames and index them into S3 Vectors
 
 ### Implementation
 
