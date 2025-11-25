@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimodal Video Intelligence Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        /* Video Library */
+        .video-library {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .library-header h2 {
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-btn {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .library-content {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .library-content.expanded {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .video-card {
+            background: rgba(15, 15, 30, 0.6);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .video-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .video-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .video-duration {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .delete-video-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255, 70, 70, 0.9);
+            border: none;
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .video-card:hover .delete-video-btn {
+            opacity: 1;
+        }
+
+        .delete-video-btn:hover {
+            background: rgba(255, 50, 50, 1);
+            transform: scale(1.1);
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+
+        /* Tools Panel (Left) */
+        .tools-panel {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .tool-section {
+            margin-bottom: 30px;
+        }
+
+        .tool-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .tool-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+        }
+
+        .tool-divider {
+            height: 1px;
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.3) 0%, transparent 100%);
+            margin: 20px 0;
+        }
+
+        /* Search Tools */
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(15, 15, 30, 0.6);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .mode-btn.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .search-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .search-tab {
+            flex: 1;
+            padding: 10px;
+            background: rgba(15, 15, 30, 0.6);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .search-tab.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-tab-label {
+            font-size: 11px;
+            display: block;
+            margin-top: 4px;
+            color: #888;
+        }
+
+        .search-tab.active .search-tab-label {
+            color: #667eea;
+        }
+
+        .search-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .search-scope {
+            width: 100%;
+            padding: 10px;
+            background: rgba(15, 15, 30, 0.8);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(15, 15, 30, 0.8);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-container {
+            margin-top: 15px;
+        }
+
+        .result-item {
+            background: rgba(15, 15, 30, 0.6);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .result-video {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .result-score {
+            font-size: 12px;
+            color: #00ff88;
+        }
+
+        .result-time {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .result-text {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.4;
+        }
+
+        .frames-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .frame-item {
+            position: relative;
+            cursor: pointer;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .frame-item:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .frame-thumbnail {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+
+        .frame-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 4px 6px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Video Player (Right) */
+        .player-panel {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            position: relative;
+        }
+
+        .player-empty {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            text-align: center;
+        }
+
+        .player-empty-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .player-container {
+            display: none;
+        }
+
+        .player-container.active {
+            display: block;
+        }
+
+        .player-header {
+            margin-bottom: 15px;
+        }
+
+        .player-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .player-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 10px 16px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        /* Removed unused transcript and metadata CSS */
+
+        /* Loading & Empty States */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 15, 30, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎬 Multimodal Video Intelligence Search</h1>
+            <div class="header-stats">
+                <div class="stat">
+                    <span>Videos:</span>
+                    <span class="stat-value" id="videoCount">0</span>
+                </div>
+                <div class="stat">
+                    <span>Tools:</span>
+                    <span class="stat-value">6</span>
+                </div>
+                <div class="stat">
+                    <span>Indexes:</span>
+                    <span class="stat-value">3</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Library -->
+        <div class="video-library">
+            <div class="library-header">
+                <div onclick="toggleLibrary()" style="flex: 1; cursor: pointer;">
+                    <h2>📚 Video Library (<span id="libraryCount">0</span> videos)</h2>
+                </div>
+                <button class="upload-btn" onclick="event.stopPropagation(); showUploadModal()" style="margin-right: 10px;">
+                    ➕ Upload Video
+                </button>
+                <button class="toggle-btn" id="libraryToggle" onclick="toggleLibrary()">▼ Show</button>
+            </div>
+            <div class="library-content" id="libraryContent">
+                <div class="loading">Loading videos...</div>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Tools Panel (Left) -->
+            <div class="tools-panel">
+                <!-- Tool 2-4: Search -->
+                <div class="tool-section">
+                    <div class="tool-header">🔍 SEARCH TOOLS</div>
+                    
+                    <!-- Mode Toggle -->
+                    <div class="mode-toggle">
+                        <button class="mode-btn active" onclick="setSearchMode('auto')">Auto Mode</button>
+                        <button class="mode-btn" onclick="setSearchMode('manual')">Manual Mode</button>
+                    </div>
+
+                    <!-- Auto Mode -->
+                    <div id="autoMode" style="display: block;">
+                        <p style="font-size: 13px; color: #888; margin-bottom: 15px;">AI will choose the best search tool</p>
+                    </div>
+
+                    <!-- Manual Mode -->
+                    <div id="manualMode" style="display: none;">
+                        <div class="search-tabs">
+                            <div class="search-tab active" onclick="setManualTab('speech')">
+                                🎤
+                                <span class="search-tab-label">Speech</span>
+                            </div>
+                            <div class="search-tab" onclick="setManualTab('caption')">
+                                📝
+                                <span class="search-tab-label">Caption</span>
+                            </div>
+                            <div class="search-tab" onclick="setManualTab('image')">
+                                🖼
+                                <span class="search-tab-label">Image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Controls -->
+                    <div class="search-controls">
+                        <select class="search-scope" id="searchScope">
+                            <option value="all">Search in: All Videos</option>
+                            <option value="current" disabled>Search in: Current Video (select one first)</option>
+                        </select>
+                        <input 
+                            type="text" 
+                            class="search-input" 
+                            id="searchQuery"
+                            placeholder="Enter search query..."
+                        />
+                        <button class="search-btn" onclick="performSearch()">🔍 Search</button>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="results-container" id="resultsContainer">
+                        <div class="empty-state">Enter a query to search</div>
+                    </div>
+                </div>
+
+                <!-- Removed: Transcript and Metadata tools - using search indexes instead -->
+            </div>
+
+            <!-- Video Player (Right) -->
+            <div class="player-panel">
+                <!-- Empty State -->
+                <div class="player-empty" id="playerEmpty">
+                    <div class="player-empty-icon">🎬</div>
+                    <h3>No Video Selected</h3>
+                    <p style="margin-top: 10px;">Select a video from the library to begin</p>
+                </div>
+
+                <!-- Player -->
+                <div class="player-container" id="playerContainer">
+                    <div class="player-header">
+                        <div class="player-title" id="playerTitle">Video Title</div>
+                    </div>
+                    <video id="videoPlayer" controls></video>
+                </div>
+
+                <!-- Transcript Overlay -->
+                <!-- Transcript overlay removed - using search indexes instead -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'https://k0xdzhruxg.execute-api.us-east-1.amazonaws.com/prod';
+        
+        // State
+        const state = {
+            videos: [],
+            selectedVideo: null,
+            searchMode: 'auto',
+            manualMode: 'speech',
+            searchScope: 'all',
+            libraryExpanded: false
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+
+        async function init() {
+            await loadVideos();
+        }
+
+        // Video Library
+        async function loadVideos() {
+            try {
+                const response = await fetch(`${API_URL}/videos`);
+                const data = await response.json();
+                
+                state.videos = data.videos || [];
+                document.getElementById('videoCount').textContent = state.videos.length;
+                document.getElementById('libraryCount').textContent = state.videos.length;
+                
+                renderVideoLibrary();
+                populateSearchScope();
+            } catch (error) {
+                console.error('Error loading videos:', error);
+                document.getElementById('libraryContent').innerHTML = 
+                    '<div class="empty-state">Failed to load videos</div>';
+            }
+        }
+
+        function populateSearchScope() {
+            const select = document.getElementById('searchScope');
+            
+            // Keep "All Videos" option, add individual videos
+            const videoOptions = state.videos.map(v => 
+                `<option value="${v.video_id}">${v.title || v.video_id}</option>`
+            ).join('');
+            
+            select.innerHTML = `
+                <option value="all">🌐 All Videos</option>
+                ${state.videos.length > 0 ? '<option disabled>──────────</option>' + videoOptions : ''}
+            `;
+        }
+
+        function renderVideoLibrary() {
+            const container = document.getElementById('libraryContent');
+            
+            if (state.videos.length === 0) {
+                container.innerHTML = '<div class="empty-state">No videos available</div>';
+                return;
+            }
+
+            container.innerHTML = state.videos.map(video => `
+                <div class="video-card ${state.selectedVideo?.video_id === video.video_id ? 'selected' : ''}"
+                     onclick="selectVideo('${video.video_id}')">
+                    <button class="delete-video-btn" onclick="event.stopPropagation(); deleteVideo('${video.video_id}')" title="Delete video">
+                        🗑️
+                    </button>
+                    <div class="video-thumbnail">🎬</div>
+                    <div class="video-title" title="${video.video_id}">${video.video_id}</div>
+                    <div class="video-duration">${formatDuration(video.duration_seconds || 0)}</div>
+                </div>
+            `).join('');
+        }
+
+        function toggleLibrary() {
+            state.libraryExpanded = !state.libraryExpanded;
+            const content = document.getElementById('libraryContent');
+            const toggle = document.getElementById('libraryToggle');
+            
+            if (state.libraryExpanded) {
+                content.classList.add('expanded');
+                toggle.textContent = '▲ Hide';
+            } else {
+                content.classList.remove('expanded');
+                toggle.textContent = '▼ Show';
+            }
+        }
+
+        async function selectVideo(videoId) {
+            const video = state.videos.find(v => v.video_id === videoId);
+            if (!video) return;
+            
+            state.selectedVideo = video;
+            
+            // Update UI
+            renderVideoLibrary();
+            showVideoPlayer(video);
+            
+            // Enable "current video" search scope
+            document.querySelector('#searchScope option[value="current"]').disabled = false;
+        }
+
+        async function showVideoPlayer(video) {
+            document.getElementById('playerEmpty').style.display = 'none';
+            document.getElementById('playerContainer').classList.add('active');
+            document.getElementById('playerTitle').textContent = video.video_id;
+            
+            // Get pre-signed URL from backend
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.src = ''; // Clear old video
+            
+            try {
+                const response = await fetch(`${API_URL}/videos/${video.video_id}/url`);
+                const data = await response.json();
+                
+                if (data.url) {
+                    videoPlayer.src = data.url;
+                } else {
+                    console.error('Failed to get video URL:', data.error);
+                    videoPlayer.src = ''; // Keep empty if failed
+                }
+            } catch (error) {
+                console.error('Error fetching video URL:', error);
+            }
+        }
+
+        // Search
+        function setSearchMode(mode) {
+            state.searchMode = mode;
+            
+            // Update buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide panels
+            document.getElementById('autoMode').style.display = mode === 'auto' ? 'block' : 'none';
+            document.getElementById('manualMode').style.display = mode === 'manual' ? 'block' : 'none';
+        }
+
+        function setManualTab(tab) {
+            state.manualMode = tab;
+            
+            // Update tabs
+            document.querySelectorAll('.search-tab').forEach(t => {
+                t.classList.remove('active');
+            });
+            event.target.closest('.search-tab').classList.add('active');
+            
+            // Update placeholder
+            const placeholders = {
+                speech: 'e.g., "where web sockets come in"',
+                caption: 'e.g., "person at a desk"',
+                image: 'e.g., "code editor on screen"'
+            };
+            document.getElementById('searchQuery').placeholder = placeholders[tab];
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) return;
+            
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
+            
+            // Get selected video scope
+            const scope = document.getElementById('searchScope').value;
+            const videoId = scope !== 'all' && scope !== 'current' ? scope : null;
+            
+            try {
+                let endpoint, data;
+                
+                if (state.searchMode === 'auto') {
+                    // Use chat endpoint for AI routing
+                    endpoint = `${API_URL}/chat`;
+                    data = { 
+                        message: `search for: ${query}`,
+                        video_id: videoId  // Filter by video if selected
+                    };
+                } else {
+                    // Use specific search endpoint
+                    const endpoints = {
+                        speech: '/search/speech',
+                        caption: '/search/caption',
+                        image: '/search/image'
+                    };
+                    endpoint = `${API_URL}${endpoints[state.manualMode]}`;
+                    data = { 
+                        query: query,
+                        top_k: 3,  // Always return top 3 results
+                        video_id: videoId  // Filter by video if selected
+                    };
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                // Check for API error
+                if (result.error) {
+                    resultsContainer.innerHTML = `<div class="empty-state">${result.error}</div>`;
+                    return;
+                }
+                
+                displayResults(result);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = '<div class="empty-state">Network error, please try again</div>';
+            }
+        }
+
+        function displayResults(result) {
+            const container = document.getElementById('resultsContainer');
+            
+            // Both auto and manual mode now return structured results
+            if (state.searchMode === 'auto' && result.response) {
+                // Legacy text response (fallback)
+                container.innerHTML = `
+                    <div style="padding: 15px; background: rgba(15, 15, 30, 0.6); border-radius: 6px; white-space: pre-wrap;">
+                        ${result.response}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Handle structured results (both auto and manual mode)
+            {
+                // Display structured results (limit to 3 results)
+                const results = (result.results || []).slice(0, 3);
+                
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No results found</div>';
+                    return;
+                }
+                
+                // Detect result type (for auto mode) or use manual mode selection
+                let resultType = state.manualMode;
+                if (state.searchMode === 'auto' && results.length > 0) {
+                    // Auto-detect type based on result fields
+                    const first = results[0];
+                    if (first.text) resultType = 'speech';
+                    else if (first.caption) resultType = 'caption';
+                    else if (first.frame_number !== undefined) resultType = 'image';
+                }
+                
+                if (resultType === 'speech') {
+                    // Speech results: show transcript text with timestamps
+                    container.innerHTML = results.map((r, idx) => {
+                        const timestamp = r.timestamp || 0;
+                        return `
+                            <div class="result-item" onclick="playVideoAt('${r.video_id || ''}', ${timestamp})" style="cursor: pointer;">
+                                <div class="result-header">
+                                    <span class="result-video">📹 ${r.video_id || 'Unknown'}</span>
+                                    <span class="result-score">Score: ${(r.score || 0).toFixed(3)}</span>
+                                </div>
+                                <div class="result-time">⏱️ ${formatTime(timestamp)}</div>
+                                <div class="result-text">${r.text || r.chunk_text || 'No text available'}</div>
+                                <div style="margin-top: 8px; color: #667eea; font-size: 12px;">▶️ Click to play at timestamp</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else if (resultType === 'caption') {
+                    // Caption results: show caption text with timestamps
+                    container.innerHTML = results.map((r, idx) => {
+                        const timestamp = r.timestamp || 0;
+                        return `
+                            <div class="result-item" onclick="playVideoAt('${r.video_id || ''}', ${timestamp})" style="cursor: pointer;">
+                                <div class="result-header">
+                                    <span class="result-video">📹 ${r.video_id || 'Unknown'}</span>
+                                    <span class="result-score">Score: ${(r.score || 0).toFixed(3)}</span>
+                                </div>
+                                <div class="result-time">⏱️ ${formatTime(timestamp)}</div>
+                                <div class="result-text">${r.caption || 'No caption available'}</div>
+                                <div style="margin-top: 8px; color: #667eea; font-size: 12px;">▶️ Click to play at timestamp</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    // Image results: show actual frame thumbnails
+                    container.innerHTML = `
+                        <div class="frames-grid">
+                            ${results.map((r, idx) => {
+                                const timestamp = r.timestamp || 0;
+                                const frameUrl = r.s3_uri ? r.s3_uri.replace('s3://PROCESSED-BUCKET/', `https://PROCESSED-BUCKET.s3.us-east-1.amazonaws.com/`) : '';
+                                return `
+                                    <div class="frame-item" onclick="playVideoAt('${r.video_id || ''}', ${timestamp})" style="cursor: pointer;">
+                                        <div class="frame-thumbnail">
+                                            ${frameUrl ? `<img src="${frameUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='🖼️'">` : '🖼️'}
+                                        </div>
+                                        <div class="frame-info">
+                                            <div style="font-weight: bold;">${r.video_id || 'Unknown'}</div>
+                                            <div>Frame ${r.frame_number || 0}</div>
+                                            <div>${formatTime(timestamp)}</div>
+                                            <div style="font-size: 11px; color: #888;">Distance: ${(r.distance || 0).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        async function playVideoAt(videoId, timestamp) {
+            console.log(`🎬 playVideoAt called: videoId="${videoId}", timestamp=${timestamp}s`);
+            
+            // First, find and select the video if it's not already selected
+            const videoToPlay = state.videos.find(v => v.video_id === videoId);
+            
+            if (!videoToPlay) {
+                console.error(`❌ Video ${videoId} not found in library`);
+                alert(`Video ${videoId} not found in library`);
+                return;
+            }
+            
+            console.log(`✓ Found video: ${videoId}`);
+            
+            // If this is a different video, load it first
+            if (state.selectedVideo !== videoId) {
+                console.log(`📥 Loading video: ${videoId}`);
+                await showVideoPlayer(videoToPlay);
+                // Wait a bit for video to initialize
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } else {
+                console.log(`✓ Video already loaded`);
+            }
+            
+            // Get video element
+            const video = document.getElementById('videoPlayer');
+            
+            if (!video || !video.src) {
+                console.error(`❌ Video element not ready`);
+                return;
+            }
+            
+            console.log(`🎥 Video readyState: ${video.readyState}, currentTime: ${video.currentTime}s`);
+            
+            // Function to seek and play
+            const seekAndPlay = () => {
+                console.log(`⏩ Seeking to ${timestamp}s`);
+                video.currentTime = timestamp;
+                video.play().then(() => {
+                    console.log(`▶️ Playing from ${timestamp}s`);
+                }).catch(err => {
+                    console.error(`❌ Play error:`, err);
+                });
+            };
+            
+            if (video.readyState >= 2) {
+                // Video is loaded enough to seek
+                seekAndPlay();
+            } else {
+                // Wait for video to be ready
+                console.log(`⏳ Waiting for video metadata...`);
+                video.addEventListener('loadedmetadata', () => {
+                    console.log(`✓ Metadata loaded`);
+                    seekAndPlay();
+                }, { once: true });
+            }
+            
+            // Scroll video player into view
+            document.getElementById('videoPlayer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function jumpToTime(seconds) {
+            const video = document.getElementById('videoPlayer');
+            if (video && video.src) {
+                video.currentTime = seconds;
+                video.play();
+            }
+        }
+
+        function jumpToFrame(frameNumber) {
+            // Calculate approximate time (45 frames per video)
+            const video = document.getElementById('videoPlayer');
+            if (video && video.duration) {
+                const timePerFrame = video.duration / 45;
+                video.currentTime = frameNumber * timePerFrame;
+                video.play();
+            }
+        }
+
+        // Removed unused transcript and metadata functions
+        // The system now uses the 3 search indexes: Speech, Caption, and Image
+
+        // Utility functions
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` 
+                        : `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // Delete video function
+        async function deleteVideo(videoId) {
+            if (!confirm(`Are you sure you want to delete "${videoId}"?\n\nThis will remove:\n- Raw video file\n- All processed data\n- Metadata from database\n- Indexed content from Knowledge Bases`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/videos/${videoId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`✅ Video "${videoId}" deleted successfully!`);
+                    // Reload videos list
+                    await loadVideos();
+                    // Clear player if this video was selected
+                    if (state.selectedVideo?.video_id === videoId) {
+                        state.selectedVideo = null;
+                        document.getElementById('playerContainer').classList.remove('active');
+                        document.getElementById('playerEmpty').style.display = 'flex';
+                    }
+                } else {
+                    alert(`❌ Error deleting video: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error deleting video:', error);
+                alert(`❌ Failed to delete video: ${error.message}`);
+            }
+        }
+
+        // Upload video modal and function
+        function showUploadModal() {
+            const modal = document.getElementById('uploadModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                return;
+            }
+
+            // Create modal if it doesn't exist
+            const modalHTML = `
+                <div id="uploadModal" style="display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #1a1a2e; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 1px solid rgba(102, 126, 234, 0.3);">
+                        <h2 style="margin-top: 0; color: #667eea;">📤 Upload Video</h2>
+                        <form id="uploadForm" onsubmit="event.preventDefault(); uploadVideo();">
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 8px; color: #aaa;">Video File:</label>
+                                <input type="file" id="videoFile" accept="video/mp4,video/*" required 
+                                       style="width: 100%; padding: 10px; background: rgba(15,15,30,0.6); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 6px; color: white;">
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 8px; color: #aaa;">Custom Title (optional):</label>
+                                <input type="text" id="videoTitle" placeholder="Leave empty to use filename"
+                                       style="width: 100%; padding: 10px; background: rgba(15,15,30,0.6); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 6px; color: white;">
+                            </div>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button type="button" onclick="closeUploadModal()" 
+                                        style="padding: 10px 20px; background: rgba(100,100,100,0.3); border: none; border-radius: 6px; color: white; cursor: pointer;">
+                                    Cancel
+                                </button>
+                                <button type="submit" id="uploadBtn"
+                                        style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 600;">
+                                    Upload
+                                </button>
+                            </div>
+                            <div id="uploadProgress" style="margin-top: 20px; display: none;">
+                                <div style="color: #aaa; margin-bottom: 8px;">Uploading...</div>
+                                <div style="background: rgba(15,15,30,0.6); height: 24px; border-radius: 12px; overflow: hidden;">
+                                    <div id="progressBar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closeUploadModal() {
+            const modal = document.getElementById('uploadModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function uploadVideo() {
+            const fileInput = document.getElementById('videoFile');
+            const titleInput = document.getElementById('videoTitle');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a video file');
+                return;
+            }
+
+            // File size check (max 1GB)
+            const maxSize = 1024 * 1024 * 1024; // 1GB
+            if (file.size > maxSize) {
+                alert(`File too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Maximum size is 1 GB.`);
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            try {
+                // Step 1: Get pre-signed upload URL from backend
+                progressBar.style.width = '10%';
+                const urlResponse = await fetch(`${API_URL}/videos/upload-url`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_name: file.name,
+                        title: titleInput.value || null
+                    })
+                });
+
+                const urlData = await urlResponse.json();
+
+                if (!urlResponse.ok) {
+                    throw new Error(urlData.error || 'Failed to get upload URL');
+                }
+
+                progressBar.style.width = '20%';
+
+                // Step 2: Upload directly to S3 using pre-signed URL
+                const formData = new FormData();
+                
+                // Add all the fields from the pre-signed POST
+                console.log('Pre-signed URL:', urlData.upload_url);
+                console.log('Fields:', urlData.fields);
+                Object.keys(urlData.fields).forEach(key => {
+                    formData.append(key, urlData.fields[key]);
+                    console.log(`  ${key}: ${urlData.fields[key].substring(0, 50)}...`);
+                });
+                
+                // Add the file last
+                formData.append('file', file);
+                console.log('File added:', file.name, file.size, 'bytes');
+
+                // Upload to S3 with progress tracking
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = 20 + (e.loaded / e.total) * 70; // 20% to 90%
+                        progressBar.style.width = percentComplete + '%';
+                    }
+                });
+
+                const uploadPromise = new Promise((resolve, reject) => {
+                    xhr.addEventListener('load', () => {
+                        console.log('Upload complete:', xhr.status, xhr.responseText);
+                        if (xhr.status === 204 || xhr.status === 200) {
+                            resolve();
+                        } else {
+                            console.error('Upload failed:', xhr.status, xhr.responseText);
+                            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText.substring(0, 200)}`));
+                        }
+                    });
+                    xhr.addEventListener('error', (e) => {
+                        console.error('Upload error event:', e);
+                        reject(new Error('Upload failed - network error'));
+                    });
+                    xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+                });
+
+                xhr.open('POST', urlData.upload_url);
+                xhr.send(formData);
+
+                await uploadPromise;
+
+                progressBar.style.width = '100%';
+
+                alert(`✅ Video uploaded successfully!\n\nVideo ID: ${urlData.video_id}\nStatus: Processing\n\nThe video will appear in the library once processing completes (~5-10 minutes).`);
+                closeUploadModal();
+                
+                // Reload videos list after a delay
+                setTimeout(() => loadVideos(), 2000);
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert(`❌ Upload failed: ${error.message}`);
+            } finally {
+                uploadBtn.disabled = false;
+                progressDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
