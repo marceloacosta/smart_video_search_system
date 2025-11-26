@@ -22,6 +22,7 @@ build/
 # CDK
 infrastructure/cdk.out/
 infrastructure/.cdk.staging/
+infrastructure/cdk.context.json
 
 # Python dependencies in lambdas
 src/lambdas/certifi/
