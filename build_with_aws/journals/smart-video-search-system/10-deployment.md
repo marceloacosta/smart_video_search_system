@@ -82,12 +82,19 @@ cdk deploy --all
 
 **What happens during deploy:**
 1. CloudFormation template synthesized
-2. S3 buckets created (raw, processed, vectors, website)
+2. S3 buckets created (raw, processed, website)
 3. Lambda layers built (ffmpeg)
-4. Lambda functions deployed
-5. S3 Vectors index created
-6. Bedrock Knowledge Bases created (speech and caption)
-7. API Gateway and CloudFront setup
+4. Lambda functions deployed (19 total)
+5. DynamoDB table created (video metadata)
+6. API Gateway REST API deployed
+7. CloudFront distribution configured
+8. IAM roles and policies created
+9. CloudWatch log groups created
+
+**What does NOT happen during deploy:**
+- Bedrock Knowledge Bases are NOT created by CDK (must exist before deployment)
+- S3 Vectors index is NOT created by CDK (auto-created on first `put_vectors()` call)
+- AgentCore Gateway is NOT created by CDK (optional, configured separately)
 
 ### 3. Post-Deployment Setup
 

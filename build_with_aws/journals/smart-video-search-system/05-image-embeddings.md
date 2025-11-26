@@ -166,6 +166,8 @@ def generate_embedding(bedrock_client, image_bytes):
 **Dimensions:** 1024  
 **Engine:** S3 Vectors (native AWS vector storage)
 
+**Note:** The S3 Vectors index is automatically created when the `embed_and_index_images` Lambda makes its first `put_vectors()` call. No manual setup or CDK resource definition is required - S3 Vectors creates the index on-demand.
+
 ### Vector Record Format
 
 Each vector record contains:

@@ -29,9 +29,12 @@ The CDK stack requires existing Bedrock Knowledge Bases. Create them before depl
 ```bash
 # In AWS Console: Bedrock → Knowledge bases → Create knowledge base
 Name: video-search-speech-kb
-Storage: Amazon S3 (will be created by CDK)
+Storage: Amazon S3
+Vector store: Bedrock creates and manages vector store
 Embeddings model: Titan Text Embeddings v2
 ```
+
+**Important**: Choose "Bedrock creates and manages vector store" - Bedrock will auto-create the S3 vector storage for text embeddings.
 
 Note the Knowledge Base ID (e.g., `GEABRHGWCO`) and Data Source ID.
 
@@ -40,9 +43,12 @@ Note the Knowledge Base ID (e.g., `GEABRHGWCO`) and Data Source ID.
 ```bash
 # In AWS Console: Bedrock → Knowledge bases → Create knowledge base  
 Name: video-search-caption-kb
-Storage: Amazon S3 (will be created by CDK)
+Storage: Amazon S3
+Vector store: Bedrock creates and manages vector store
 Embeddings model: Titan Text Embeddings v2
 ```
+
+**Important**: Choose "Bedrock creates and manages vector store" - Bedrock will auto-create the S3 vector storage for text embeddings.
 
 Note the Knowledge Base ID (e.g., `OELLH9GHHQ`) and Data Source ID.
 
@@ -100,6 +106,23 @@ cdk deploy --all
 This deploys:
 - **InfrastructureStack**: 19 Lambda functions, S3 buckets, DynamoDB table, API Gateway
 - **FrontendStack**: S3 bucket + CloudFront distribution for the web UI
+
+**What CDK Creates:**
+- ✅ 4 S3 buckets (raw videos, processed data, vectors bucket name, frontend assets)
+- ✅ 19 Lambda functions (video processing, search tools, API)
+- ✅ 1 DynamoDB table (video metadata)
+- ✅ API Gateway REST API
+- ✅ CloudFront distribution
+- ✅ IAM roles and policies
+- ✅ CloudWatch log groups
+
+**What CDK Does NOT Create (must exist before deployment):**
+- ❌ Bedrock Knowledge Bases (speech and caption) - Create manually in AWS Console
+- ❌ AgentCore Gateway - Optional, configure separately if using
+
+**What Gets Auto-Created on First Use:**
+- 🔄 S3 Vectors index for image embeddings - Auto-created when `embed_and_index_images` Lambda first calls `put_vectors()`
+- 🔄 Bedrock KB vector stores - Auto-created by Bedrock when KBs are created
 
 ### Deploy Individual Stacks
 
@@ -310,4 +333,5 @@ For issues or questions:
 2. Review CloudFormation events in AWS Console
 3. Run `cdk doctor` to diagnose CDK issues
 4. See main [README.md](../README.md) for architecture details
+
 
