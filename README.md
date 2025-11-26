@@ -42,7 +42,9 @@ smart_video_search_system/
 │   └── web/              # Frontend application
 │       └── index.html
 ├── infrastructure/       # AWS CDK infrastructure code
-│   └── cdk.out/         # Build artifacts (not committed)
+│   ├── app.py           # CDK entry point
+│   ├── infrastructure/  # Stack definitions
+│   └── README.md        # Deployment guide
 ├── build_with_aws/
 │   └── journals/        # Detailed documentation
 └── examples/            # Comparison examples
@@ -70,6 +72,8 @@ Go to AWS Console → Bedrock → Model access → Enable models
 
 ## Quick Start
 
+> **📖 For detailed deployment instructions**, see [infrastructure/README.md](infrastructure/README.md)
+
 ### 1. Clone Repository
 
 ```bash
@@ -77,7 +81,15 @@ git clone https://github.com/marceloacosta/smart_video_search_system.git
 cd smart_video_search_system
 ```
 
-### 2. Install Dependencies
+### 2. Create Bedrock Knowledge Bases
+
+**Important:** Create two Knowledge Bases in AWS Console before deploying:
+1. Speech Knowledge Base (for transcripts)
+2. Caption Knowledge Base (for frame descriptions)
+
+Note the Knowledge Base IDs and Data Source IDs - you'll need them for configuration.
+
+### 3. Install Dependencies
 
 ```bash
 # Install CDK
@@ -90,13 +102,26 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Bootstrap CDK (first time only)
+### 4. Configure
+
+Create `infrastructure/cdk.context.json`:
+
+```json
+{
+  "speech_kb_id": "YOUR_SPEECH_KB_ID",
+  "caption_kb_id": "YOUR_CAPTION_KB_ID",
+  "speech_ds_id": "YOUR_SPEECH_DATASOURCE_ID",
+  "caption_ds_id": "YOUR_CAPTION_DATASOURCE_ID"
+}
+```
+
+### 5. Bootstrap CDK (first time only)
 
 ```bash
 cdk bootstrap aws://ACCOUNT-ID/us-east-1
 ```
 
-### 4. Deploy
+### 6. Deploy
 
 ```bash
 cdk deploy --all
@@ -105,15 +130,26 @@ cdk deploy --all
 The deployment will output:
 - `WebsiteURL` - CloudFront URL for the frontend
 - `ApiEndpoint` - API Gateway URL
-- Resource identifiers (buckets, Knowledge Base IDs, etc.)
+- Resource identifiers (buckets, table name, etc.)
 
-### 5. Test
+### 7. Test
 
 1. Open the `WebsiteURL` in your browser
 2. Upload a test video (MP4 format recommended)
 3. Wait for processing to complete (~5-10 minutes for a 1-minute video)
 4. Try searching using Manual Mode (select Speech/Caption/Image)
 5. Try Auto Mode - let the agent decide which search to use
+
+## Deployment Guide
+
+For comprehensive deployment instructions including:
+- Bedrock Knowledge Base setup
+- Configuration options
+- Troubleshooting
+- Cost optimization
+- Post-deployment setup
+
+See **[infrastructure/README.md](infrastructure/README.md)**
 
 ## Documentation
 
